@@ -71,8 +71,9 @@ Element row(const ViewState &s, size_t i, HitBoxes *boxes)
         name = name | color(Color::Yellow);
     Element mount = text(be.isMounted() ? std::string(icons(s.iconMode).mounted) + " " + be.mountpoint
                                         : be.mountpoint);
+    const bool marked = s.marked.count(be.name) > 0;
     Element line = hbox({
-        cell(text(std::string(" ") + stateIcon(s, be)), kIconWidth),
+        cell(hbox({text(marked ? "*" : " ") | color(Color::Cyan) | bold, text(stateIcon(s, be))}), kIconWidth),
         name | flex,
         cell(text(be.active), kActiveWidth),
         cell(mount, kMountWidth),
@@ -167,19 +168,31 @@ Element outputTab(const ViewState &s)
 Element helpTab()
 {
     const auto key = [](const std::string &k, const std::string &what) {
-        return hbox({text(k) | bold | size(WIDTH, EQUAL, 22), text(what)});
+        return hbox({text(k) | bold | size(WIDTH, EQUAL, 20), text(what)});
     };
-    return vbox({
-        key("F5 / Ctrl+R", i18n::tr("Refresh")),
-        key("↑ ↓ PgUp PgDn Home End", i18n::tr("Move")),
-        key("Ctrl+F  /", i18n::tr("Focus filter")),
-        key("Esc  Enter", i18n::tr("Leave filter")),
-        key("F6", i18n::tr("Choose the sort column (again: reverse; (bectl order): original order)")),
-        key("1-4  Alt+1-4  F1", i18n::tr("Tabs")),
-        key("Tab", i18n::tr("Switch the focused table")),
-        key("Ctrl+Q  F10  q", i18n::tr("Quit")),
-        text(i18n::tr("Click a column header to sort")) | dim,
-        text(i18n::tr("This version is read-only: operations arrive in v0.2.0.")) | dim,
+    const auto strip = [](const char *k) { return stripMnemonic(i18n::tr(k)); };
+    // Duas colunas, para caber na altura da aba.
+    return hbox({
+        vbox({
+            key("F5 / Ctrl+R", i18n::tr("Refresh")),
+            key("Ctrl+N", strip("&Create…")),
+            key("Enter", i18n::tr("Activate (confirmation)")),
+            key("Ctrl+T", i18n::tr("Activate temporary")),
+            key("F2", strip("&Rename…")),
+            key("Ctrl+S", strip("Create &snapshot…")),
+            key("Alt+M / Ctrl+U", i18n::tr("Mount") + " / " + i18n::tr("Unmount")),
+            key("Space / Delete", i18n::tr("Mark / unmark for batch destroy") + " / " + i18n::tr("Destroy")),
+        }) | flex,
+        vbox({
+            key("Ctrl+F  /", i18n::tr("Focus filter")),
+            key("F6", i18n::tr("Sort")),
+            key("1-4  Alt+1-4  F1", i18n::tr("Tabs")),
+            key("Tab", i18n::tr("Switch the focused table")),
+            key("Enter / Delete", i18n::tr("Clone (snapshot table)")),
+            key("F9  Alt+A/C/J", i18n::tr("Open the menus")),
+            key("Ctrl+Q  F10  q", i18n::tr("Quit")),
+            text(i18n::tr("Click a column header to sort")) | dim,
+        }) | flex,
     });
 }
 
@@ -215,18 +228,123 @@ Element statusBar(const ViewState &s)
     Element l = text(left);
     if (s.error)
         l = l | color(Color::Red);
-    return hbox({l | flex, text(i18n::trf("Theme: %1", {s.themeLabel})) | dim, text("  "),
+    Element marks = s.marked.empty()
+                        ? text("")
+                        : text(i18n::trf("%1 marked", {std::to_string(s.marked.size())}) + "  ") | color(Color::Cyan);
+    return hbox({l | flex, marks, text(i18n::trf("Theme: %1", {s.themeLabel})) | dim, text("  "),
                  text(i18n::trf("%1 BE(s)", {std::to_string(s.totalEnvironments)}))});
 }
 
 Element keyBar()
 {
     const auto key = [](const char *k, const std::string &label) {
-        return hbox({text(k) | bold, text(label + "  ") | dim});
+        return hbox({text(k) | bold, text(label + " ") | inverted});
     };
-    return hbox({key("F5 ", i18n::tr("Refresh")), key("F6 ", i18n::tr("Sort")),
-                 key("^F ", i18n::tr("Filter")), key("1-4 ", i18n::tr("Tabs")),
-                 key("F10 ", i18n::tr("Quit"))});
+    const auto strip = [](const char *k) { return stripMnemonic(i18n::tr(k)); };
+    // Como no Midnight Commander: teclas de função numeradas.
+    return hbox({key("F1", i18n::tr("Help")), text(" "), key("F2", strip("&Rename…")), text(" "),
+                 key("F5", i18n::tr("Refresh")), text(" "), key("F6", i18n::tr("Sort")), text(" "),
+                 key("F9", i18n::tr("Menu")), text(" "), key("F10", i18n::tr("Quit")), filler()});
+}
+
+Element button(const std::string &label, bool focused, bool danger)
+{
+    Element b = text("[ " + label + " ]");
+    if (focused)
+        b = b | inverted | bold;
+    if (danger && focused)
+        b = b | color(Color::Red);
+    return b;
+}
+
+Element formDialog(const Dialog &d)
+{
+    Elements rows;
+    for (size_t i = 0; i < d.fields.size(); ++i) {
+        const DialogField &f = d.fields[i];
+        const bool focused = static_cast<int>(i) == d.focus;
+        Element value;
+        switch (f.kind) {
+        case DialogField::Text:
+            value = hbox({text(f.text), focused ? text("█") | blink : text("")}) | size(WIDTH, GREATER_THAN, 30)
+                    | borderLight;
+            break;
+        case DialogField::Check:
+            value = text(std::string(f.checked ? "[x] " : "[ ] ") + f.label);
+            break;
+        case DialogField::Choice:
+            value = text("< " + (f.choices.empty() ? std::string() : f.choices[f.choice]) + " >")
+                    | size(WIDTH, GREATER_THAN, 30);
+            break;
+        }
+        if (focused && f.kind != DialogField::Text)
+            value = value | inverted;
+        Element label = text(f.kind == DialogField::Check ? std::string() : f.label) | size(WIDTH, EQUAL, 28);
+        rows.push_back(hbox({label, value}));
+        if (!f.hint.empty())
+            rows.push_back(hbox({text("") | size(WIDTH, EQUAL, 28), text(f.hint) | dim}));
+    }
+    const int ok = static_cast<int>(d.fields.size());
+    rows.push_back(text(""));
+    rows.push_back(hbox({filler(), button(i18n::tr("OK"), d.focus == ok, false), text("  "),
+                         button(i18n::tr("Cancel"), d.focus == ok + 1, false)}));
+    rows.push_back(text(i18n::tr("Tab / ↑ ↓: field   Space: check   ← →: choose   Enter: confirm   Esc: cancel"))
+                   | dim);
+    return window(text(" " + d.title + " ") | bold, vbox(std::move(rows)));
+}
+
+Elements paragraph(const std::string &message)
+{
+    Elements lines;
+    size_t start = 0;
+    for (;;) {
+        const size_t nl = message.find('\n', start);
+        lines.push_back(text(message.substr(start, nl == std::string::npos ? std::string::npos : nl - start)));
+        if (nl == std::string::npos)
+            break;
+        start = nl + 1;
+    }
+    return lines;
+}
+
+Element confirmDialog(const Dialog &d)
+{
+    Elements rows = paragraph(d.message);
+    rows.push_back(text(""));
+    rows.push_back(hbox({filler(), button(i18n::tr("Yes"), d.focus == 0, d.danger), text("  "),
+                         button(i18n::tr("No"), d.focus == 1, false)}));
+    Element w = window(text(" " + d.title + " ") | bold, vbox(std::move(rows)));
+    return d.danger ? w | color(Color::Red) : w;
+}
+
+Element messageDialog(const Dialog &d)
+{
+    Elements rows = paragraph(d.message);
+    rows.push_back(text(""));
+    rows.push_back(hbox({filler(), button(i18n::tr("OK"), true, false)}));
+    return window(text(" " + d.title + " ") | bold, vbox(std::move(rows)));
+}
+
+Element menuDialog(const Dialog &d)
+{
+    Elements titles;
+    for (size_t m = 0; m < d.menus.size(); ++m) {
+        Element t = text(" " + d.menus[m] + " ");
+        titles.push_back(static_cast<int>(m) == d.menu ? t | inverted | bold : t);
+    }
+    Elements items;
+    if (d.menu >= 0 && d.menu < static_cast<int>(d.items.size())) {
+        const auto &list = d.items[d.menu];
+        for (size_t i = 0; i < list.size(); ++i) {
+            if (list[i].first.empty()) {
+                items.push_back(separatorLight());
+                continue;
+            }
+            Element e = hbox({text(" " + list[i].first) | flex, text(list[i].second + " ") | dim});
+            items.push_back(static_cast<int>(i) == d.item ? e | inverted : e);
+        }
+    }
+    return vbox({hbox(std::move(titles)), window(text(""), vbox(std::move(items)) | size(WIDTH, GREATER_THAN, 36))});
 }
 
 Element sortChooser(const ViewState &s)
@@ -243,6 +361,15 @@ Element sortChooser(const ViewState &s)
 }
 
 } // namespace
+
+std::string stripMnemonic(const std::string &label)
+{
+    std::string out;
+    for (char c : label)
+        if (c != '&')
+            out += c;
+    return out;
+}
 
 std::string columnTitle(int column)
 {
@@ -279,6 +406,13 @@ Element render(const ViewState &s, Element filter, HitBoxes *boxes)
         statusBar(s),
         keyBar(),
     });
+    switch (s.dialog.kind) {
+    case Dialog::Form:    return dbox({main, formDialog(s.dialog) | clear_under | center});
+    case Dialog::Confirm: return dbox({main, confirmDialog(s.dialog) | clear_under | center});
+    case Dialog::Message: return dbox({main, messageDialog(s.dialog) | clear_under | center});
+    case Dialog::Menu:    return dbox({main, menuDialog(s.dialog) | clear_under});
+    case Dialog::None:    break;
+    }
     if (s.sortChooserOpen)
         return dbox({main, sortChooser(s)});
     return main;

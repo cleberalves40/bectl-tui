@@ -77,6 +77,7 @@ public:
     std::string unmount(const std::string &name, bool force = false);
 
     const std::string &bectlPath() const { return m_bectlPath; }
+    const std::string &elevator() const { return m_elevator; }
 
 private:
     std::string runOrThrow(const std::vector<std::string> &args, bool privileged);

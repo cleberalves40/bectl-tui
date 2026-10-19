@@ -21,15 +21,24 @@ atalhos sempre que o terminal permite, e ícones [Nerd Fonts](https://www.nerdfo
  Estado: Ativo agora
 ──────────────────────────────────────────────────────────────────────────────
  Pronto.                                                 Tema: Sistema  3 BE(s)
- F5 Atualizar  F6 Ordenar  ^F Filtrar  1-4 Abas  F10 Sair
+ F1 Ajuda  F2 Renomear  F5 Atualizar  F6 Ordenar  F9 Menu  F10 Sair
 ```
 
 ## Estado
 
-**v0.1.0: somente leitura.** Lista, filtra e ordena os BEs, mostra detalhes,
-snapshots, saída e ajuda. As operações (criar, ativar, renomear, destruir, montar,
-snapshots) chegam na v0.2.0, e Preferências, temas e idiomas na v0.3.0. A v1.0.0 terá
-paridade completa com o bectl-gui 1.2.0. Veja o [CHANGELOG](CHANGELOG.md).
+**v0.2.0: operações.** Além de listar, filtrar e ordenar, cria, ativa (também
+temporariamente), renomeia, destrói (vários de uma vez, protegendo o BE em uso), monta e
+desmonta BEs, e cria, clona e destrói snapshots, com os diálogos, confirmações e menus
+do bectl-gui. Preferências, temas e idiomas chegam na v0.3.0, e a v1.0.0 terá paridade
+completa com o bectl-gui 1.2.0. Veja o [CHANGELOG](CHANGELOG.md).
+
+### Senha (doas/sudo)
+
+Como usuário comum, as escritas passam pelo `doas` (padrão; `elevator=sudo` em
+`~/.config/bectl-tui/config` troca para o `sudo`, e `elevator=` executa o `bectl`
+direto). Se o `doas` não pedir senha (regra `nopass` no `doas.conf`), a operação roda
+em segundo plano. Se pedir, a tela é suspensa, o terminal mostra o comando e a pergunta
+da senha, e a interface volta em seguida. Como root, o `bectl` roda direto.
 
 ## Requisitos (FreeBSD)
 
@@ -58,9 +67,9 @@ cmake --build build
 
 Opções: `--icons=nerd|unicode|ascii`, `--lang=en_US|pt_BR|es_ES`, `--config=ARQUIVO`,
 `--version`. As preferências ficam em `~/.config/bectl-tui/config`; hoje, a ordem da
-tabela.
+tabela e o `elevator` (doas, sudo ou vazio).
 
-## Teclado e mouse (v0.1.0)
+## Teclado e mouse (v0.2.0)
 
 | Tecla | Ação |
 |:---|:---|
@@ -72,6 +81,15 @@ tabela.
 | <kbd>1</kbd>–<kbd>4</kbd> / <kbd>Alt+1</kbd>–<kbd>Alt+4</kbd> | Abas Informação, Saída, Ajuda, Snapshots (<kbd>F1</kbd>: Ajuda) |
 | <kbd>Tab</kbd> | Alternar o foco entre a tabela de BEs e a de snapshots |
 | <kbd>Ctrl+Q</kbd> / <kbd>F10</kbd> / <kbd>q</kbd> | Sair |
+| <kbd>Ctrl+N</kbd> | Criar Boot Environment |
+| <kbd>Enter</kbd> / <kbd>Ctrl+T</kbd> | Ativar / ativar temporariamente (com confirmação) |
+| <kbd>F2</kbd> | Renomear |
+| <kbd>Espaço</kbd> | Marcar para destruir vários de uma vez |
+| <kbd>Delete</kbd> | Destruir os marcados, ou o selecionado |
+| <kbd>Alt+M</kbd> / <kbd>Ctrl+U</kbd> | Montar / desmontar |
+| <kbd>Ctrl+S</kbd> | Criar snapshot |
+| <kbd>Enter</kbd> / <kbd>Delete</kbd> na tabela de snapshots | Clonar / destruir o snapshot |
+| <kbd>F9</kbd>, <kbd>Alt+A</kbd>, <kbd>Alt+C</kbd>, <kbd>Alt+J</kbd> | Menus Ações, Arquivo, Ações, Ajuda |
 
 O mapa completo, com a correspondência para os atalhos do bectl-gui, está em
 [docs/KEYMAP.md](docs/KEYMAP.md).
@@ -82,7 +100,7 @@ O mapa completo, com a correspondência para os atalhos do bectl-gui, está em
 |:---|:---|:---|
 | Núcleo | `src/core/` | `bectl(8)` sem shell, validação de nomes (regras do `libbe`), leitura de `bectl list` e `list -s`, tamanhos, i18n e preferências. C++17 puro: um porte do `BectlManager` do bectl-gui 1.2.0. |
 | Modelo | `src/model/` | Filtro, ordenação (espaço em bytes, data, estado) e seleção que acompanha o BE |
-| Interface | `src/tui/` | FTXUI: tela, teclado, mouse e listagem em segundo plano |
+| Interface | `src/tui/` | FTXUI: tela, diálogos, menus, teclado e mouse; listagem e operações em segundo plano, e o terminal devolvido ao doas/sudo quando há senha |
 
 ## Testes
 
@@ -94,12 +112,14 @@ sh tests/freebsd-e2e.sh build    # no FreeBSD, como root: integração com o bec
 - `test_core`: porte do `tst_validation` do bectl-gui (os mesmos casos), mais a
   execução de processos e as preferências.
 - `test_model`: filtro, ordenação e seleção.
-- `test_view`: desenha a tela em texto e dirige a interface com eventos de teclado.
+- `test_view`: desenha a tela em texto e dirige a interface com eventos de teclado,
+  incluindo cada operação e diálogo contra um `bectl` falso que registra os comandos.
 - `test_integration`: porte do `tst_bectlmanager`, contra o `bectl(8)` real num pool
   ZFS de rascunho, sem tocar nos BEs do sistema.
 
 O CI roda no Ubuntu (com ASan e UBSan) e no FreeBSD 14.5 e 15.1, em amd64 e aarch64,
-incluindo a interface num pseudo-terminal.
+incluindo a interface num pseudo-terminal: no FreeBSD, ela cria e destrói um BE de
+verdade no pool de rascunho pelos diálogos.
 
 ## Licença
 
