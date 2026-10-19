@@ -53,7 +53,8 @@ chmod +x "$work/bectl"
 "$work/bectl" list
 
 step "test_integration"
-BECTL_TEST_CMD=$work/bectl "$build/test_integration"
+# Em sequência: o Catch2 3 embaralha a ordem por padrão.
+BECTL_TEST_CMD=$work/bectl "$build/test_integration" --order decl
 
 # A interface lista o pool de rascunho e sai com "q", num pseudo-terminal.
 step "interface (pseudo-terminal)"

@@ -72,8 +72,14 @@ if(BECTL_TUI_BUILD_TESTS)
         target_compile_options(${test} PRIVATE
             $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra>
         )
-        add_test(NAME ${test} COMMAND ${test})
+        # A integração é uma sequência (criar, renomear, ativar, destruir), e o
+        # Catch2 3 embaralha a ordem por padrão.
+        if(test STREQUAL "test_integration")
+            add_test(NAME ${test} COMMAND ${test} --order decl)
+        else()
+            add_test(NAME ${test} COMMAND ${test})
+        endif()
     endforeach()
-    # O Catch2 sai com 4 quando todos os testes foram ignorados (sem bectl).
+    # Sem bectl, todos os casos da integração são ignorados e o Catch2 sai com 4.
     set_tests_properties(test_integration PROPERTIES SKIP_RETURN_CODE 4)
 endif()

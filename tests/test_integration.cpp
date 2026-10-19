@@ -1,5 +1,6 @@
 // Integração contra o bectl(8) real: porte do tst_bectlmanager do bectl-gui
-// 1.2.0, com os mesmos casos e na mesma ordem.
+// 1.2.0, com os mesmos casos e na mesma ordem. Os casos formam uma sequência
+// e precisam rodar com --order decl (o Catch2 3 embaralha por padrão).
 //
 // Precisa de root e de um pool ZFS de rascunho organizado como raiz de boot
 // environments. tests/freebsd-e2e.sh prepara esse pool e define
