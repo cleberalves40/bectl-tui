@@ -38,6 +38,9 @@ pkg install ftxui cmake ninja
 pkg install nerd-fonts-jetbrainsmono      # ícones; opcional
 ```
 
+Se o `pkg` não encontrar o `ftxui` (o ramo `latest` do FreeBSD 15/aarch64 ficou sem ele em
+outubro de 2026), instale do ramo `quarterly`: veja `ci/freebsd-ci.sh`.
+
 Para os ícones, configure o terminal com a fonte **JetBrainsMono Nerd Font Mono**. A
 variante *Mono* mantém cada ícone com a largura de um caractere, e as colunas ficam
 alinhadas. Sem uma fonte Nerd, use `--icons=unicode` ou `--icons=ascii`.

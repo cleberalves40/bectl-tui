@@ -7,7 +7,24 @@ set -eu
 
 echo "== $(uname -srm), $(sysctl -n hw.ncpu) CPU(s), $(($(sysctl -n hw.physmem) / 1048576)) MB"
 
-pkg install -y cmake ninja ftxui catch2 >/dev/null
+pkg install -y cmake ninja catch2 >/dev/null
+# O ramo latest do FreeBSD 15/aarch64 ficou sem o ftxui (outubro de 2026); o
+# quarterly o tem. Sem dependências, ele convive com os demais pacotes.
+if ! pkg install -y ftxui >/dev/null 2>&1; then
+	echo "== ftxui ausente no repositório padrão; instalando do quarterly"
+	mkdir -p /usr/local/etc/pkg/repos
+	cat >/usr/local/etc/pkg/repos/quarterly.conf <<'CONF'
+quarterly: {
+  url: "pkg+https://pkg.FreeBSD.org/${ABI}/quarterly",
+  mirror_type: "srv",
+  signature_type: "fingerprints",
+  fingerprints: "/usr/share/keys/pkg",
+  enabled: yes
+}
+CONF
+	pkg update -q -r quarterly
+	pkg install -y -r quarterly ftxui >/dev/null
+fi
 
 echo "== toolchain"
 c++ --version | head -1
