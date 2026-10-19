@@ -57,17 +57,32 @@ step "test_integration"
 BECTL_TEST_CMD=$work/bectl "$build/test_integration" --order decl
 
 # A interface lista o pool de rascunho e sai com "q", num pseudo-terminal.
+# O "q" só é enviado quando o BE aparece na tela: num aarch64 emulado a
+# listagem demora, e uma espera fixa não basta. script -F grava a tela à
+# medida que ela é desenhada; plain() tira as sequências de escape que o FTXUI
+# intercala no texto.
 step "interface (pseudo-terminal)"
+esc=$(printf '\033')
+plain() {
+	LC_ALL=C sed -e "s#${esc}\[[0-9;?]*[ -/]*[@-~]##g" -e "s#${esc}[()][0-9A-Za-z]##g" -e "s#${esc}[=>]##g" "$1"
+}
 "$work/bectl" create -e default tela-ok
 set +e
-(sleep 5; printf q) | TERM=xterm-256color timeout 60 script -q "$work/screen.raw" \
+(
+	for i in $(seq 1 90); do
+		plain "$work/screen.raw" 2>/dev/null | grep -aq tela-ok && break
+		sleep 1
+	done
+	printf q
+) | TERM=xterm-256color timeout 180 script -F -q "$work/screen.raw" \
 	"$build/bectl-tui" --bectl="$work/bectl" --icons=ascii --lang=en_US --config="$work/config" \
 	>/dev/null 2>&1
 rc=$?
 set -e
 [ "$rc" -eq 0 ] || fail "bectl-tui terminou com status $rc"
+plain "$work/screen.raw" >"$work/screen.txt"
 for text in "Boot Environment" "tela-ok" "2 BE(s)"; do
-	grep -q "$text" "$work/screen.raw" || fail "a tela não mostrou: $text"
+	grep -aq "$text" "$work/screen.txt" || fail "a tela não mostrou: $text"
 done
 "$build/bectl-tui" --version
 
