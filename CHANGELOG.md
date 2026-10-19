@@ -28,7 +28,8 @@ Primeira versão: somente leitura.
   com as mesmas regras de validação e a mesma leitura de `bectl list` e
   `bectl list -s`.
 - Testes: núcleo (porte do `tst_validation`), modelo, tela e integração contra o
-  `bectl(8)` real (porte do `tst_bectlmanager`); CI no Ubuntu (FTXUI 6.1.9, ASan
-  e UBSan) e no FreeBSD 14.5 e 15.1, em amd64 e aarch64.
+  `bectl(8)` real (porte do `tst_bectlmanager`), mais a interface num
+  pseudo-terminal (`tests/tui-smoke.sh` e `tests/freebsd-e2e.sh`); CI no Ubuntu
+  (FTXUI 6.1.9, ASan e UBSan) e no FreeBSD 14.5 e 15.1, em amd64 e aarch64.
 
 [0.1.0]: https://github.com/cleberalves40/bectl-tui/releases/tag/v0.1.0

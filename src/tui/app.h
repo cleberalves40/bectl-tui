@@ -65,6 +65,7 @@ private:
     bool m_snapshotsFocused = false;
     int m_tab = InfoTab;
     bool m_filterMode = false;
+    bool m_started = false;   // primeira listagem já disparada
     bool m_sortChooser = false;
     int m_sortChooserIndex = 0;
 
