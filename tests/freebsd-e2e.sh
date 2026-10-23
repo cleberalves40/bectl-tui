@@ -57,7 +57,7 @@ step "test_integration"
 BECTL_TEST_CMD=$work/bectl "$build/test_integration" --order decl
 
 # A interface num pseudo-terminal, contra o pool de rascunho: lista, cria um
-# BE pelo diálogo (Ctrl+N), destrói-o (End, Del, "y") e sai com "q". Cada
+# BE pelo diálogo (Ctrl+N, a partir do default), destrói-o (End, Del, "y") e sai com "q". Cada
 # tecla só é enviada quando a tela mostra o resultado da anterior: num aarch64
 # emulado o bectl demora, e uma espera fixa não basta. script -F grava a tela
 # à medida que ela é desenhada; plain() tira as sequências de escape que o
@@ -79,7 +79,13 @@ set +e
 	wait_for tela-ok
 	printf '\016'
 	wait_for "Create Boot Environment"
-	printf 'via-tui\r'
+	# Origem "default": sem -e, o bectl -r clonaria o BE em uso no sistema,
+	# que não está no pool de rascunho.
+	printf 'via-tui\t'
+	sleep 1
+	printf '\033[C'
+	sleep 1
+	printf '\r'
 	wait_for "Boot Environment 'via-tui' created."
 	printf '\r'
 	wait_for "3 BE(s)"
@@ -98,10 +104,10 @@ set +e
 rc=$?
 set -e
 plain "$work/screen.raw" >"$work/screen.txt"
-[ "$rc" -eq 0 ] || { tail -c 4000 "$work/screen.txt"; fail "bectl-tui terminou com status $rc"; }
+[ "$rc" -eq 0 ] || { tail -c 4000 "$work/screen.txt" >&2; fail "bectl-tui terminou com status $rc"; }
 for text in "Boot Environment" "tela-ok" "2 BE(s)" "3 BE(s)" "Boot Environment 'via-tui' created." \
 	"Destroyed (1)"; do
-	grep -aq "$text" "$work/screen.txt" || { tail -c 4000 "$work/screen.txt"; fail "a tela não mostrou: $text"; }
+	grep -aq "$text" "$work/screen.txt" || { tail -c 4000 "$work/screen.txt" >&2; fail "a tela não mostrou: $text"; }
 done
 "$work/bectl" list -H | grep -q '^via-tui' && fail "via-tui não foi destruído"
 "$build/bectl-tui" --version
