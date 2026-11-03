@@ -1,5 +1,7 @@
 # bectl-tui
 
+[**Português**](README.md) | [English](README.en.md)
+
 [![Build & Test](https://github.com/cleberalves40/bectl-tui/actions/workflows/build.yml/badge.svg)](https://github.com/cleberalves40/bectl-tui/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

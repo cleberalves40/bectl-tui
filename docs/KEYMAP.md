@@ -1,5 +1,7 @@
 # Atalhos: bectl-gui → bectl-tui
 
+[**Português**](KEYMAP.md) | [English](KEYMAP.en.md)
+
 O bectl-tui mantém os atalhos do bectl-gui 1.2.0 sempre que o terminal os entrega ao
 programa. Alguns não chegam, ou chegam iguais a outra tecla, e ganham uma alternativa:
 
